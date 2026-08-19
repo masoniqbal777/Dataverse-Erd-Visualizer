@@ -1,0 +1,487 @@
+# Changelog
+
+All notable changes to the Dataverse ERD Visualizer will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.12.0] - 2026-02-16
+
+### Added
+
+- **Relationship Explorer** — Discover and expand connected tables from any entity on the canvas:
+  - **Explore Button**: Click the branch icon on any entity header to explore its relationships, or use the toolbar "Explore" button to explore from all visible tables
+  - **Grouped View**: Related entities are organized into three collapsible sections: "This table looks up to" (N:1), "Tables looking up to this" (1:N), and "Many-to-Many (N:N)"
+  - **Independent Per-Section Checkboxes**: An entity appearing in multiple sections (e.g. both N:1 and N:N) has independent checkboxes — selecting one does not auto-select others
+  - **Auto-Add Lookup Fields**: When adding related entities, the connecting lookup fields are automatically added to the field selection so relationship lines connect at field level
+  - **Explosion Prevention**: System entities (systemuser, team, etc.) and activity entities (email, task, etc.) are hidden by default to prevent diagram overload
+  - **Selective Addition**: Check individual entities or "Select All Visible", then click "Add to Canvas" to add them to the diagram
+  - **On-Canvas Awareness**: Entities already on the diagram are marked with a green indicator and sorted to the bottom
+  - **Search & Filter**: Search within the explorer panel, filter by custom-only, toggle system/activity entity visibility
+  - **Mutual Exclusion**: Opening the Relationship Explorer closes the Field Drawer (and vice versa) for a clean UI
+
+---
+
+## [0.1.11.0] - 2026-02-16
+
+### Added
+
+- **Formula, Calculated & Rollup Field Identification** ([#55](https://github.com/allandecastro/dataverse-erd-visualizer/issues/55)) - Identify and filter computed fields across the ERD:
+  - **Source Type Detection**: Fetches `SourceType` from Dataverse API to identify Power Fx Formula, Calculated, Rollup, and AI Prompt fields
+  - **Secondary Badges**: Small colored badges on ERD cards and field drawer:
+    - **FX** (purple) — Power Fx Formula (`SourceType = 3`)
+    - **CALC** (orange) — Calculated (`SourceType = 1`)
+    - **ROLL** (sky blue) — Rollup (`SourceType = 2`)
+    - **AI** (pink) — AI Prompt (`SourceType = 4`)
+  - **Computed Filter Toggle**: New "Computed" button (Sigma icon) in the field drawer to show only formula/calculated/rollup/AI fields
+  - **Export Support**: Source type indicators included in PNG, SVG, and Draw.io exports
+  - **Share URL Field Preservation**: Shared URLs now encode selected fields and field order, ensuring the shared diagram looks identical to the original (backward compatible with old URLs)
+  - **Snapshot Compatible**: Computed field metadata (`sourceType`) is rehydrated from Dataverse (or mock) metadata when snapshots are loaded
+
+- **Field Label Display Mode** ([#56](https://github.com/allandecastro/dataverse-erd-visualizer/issues/56)) - Choose how field names are shown on entity cards:
+  - **Display Name** (default) — friendly name only (e.g., "Account Name")
+  - **Schema Name** — logical/schema name only (e.g., "name")
+  - **Both** — display name with schema name below (e.g., "Account Name" with "name" underneath)
+  - Setting available in sidebar Settings under "Field Label Display"
+  - Respected across visual export formats: PNG, SVG, and Draw.io (Mermaid always uses schema names per ERD syntax)
+  - Saved and restored with snapshots and shared URLs
+  - Added to Feature Guide under Customization
+
+---
+
+## [0.1.9.0] - 2026-02-13
+
+### Added
+
+- **Entity Grouping via Color Association** - Entities sharing the same color automatically form a named group:
+  - **Auto-Derived Groups**: Assigning the same color to multiple entities creates a visual group — no manual group management needed
+  - **Group Names**: Click the pencil icon on any group header to give it a custom name (e.g., "Sales", "Service")
+  - **Collapsible Sections**: Sidebar entity list organizes into collapsible group sections when groups exist, with expand/collapse chevrons
+  - **Group Filter Dropdown**: New "All Groups" filter in sidebar filters — quickly narrow the entity list to a specific group or "Ungrouped"
+  - **Sidebar Legend**: Named groups appear in the legend with their color swatch and entity count
+  - **Snapshot Persistence**: Group names are saved and restored with snapshots (backward compatible — old snapshots load cleanly)
+  - **URL Sharing**: Group names included in shared URLs (only when non-empty, zero overhead otherwise)
+  - **Draw.io Export**: Named groups get color-coded text labels positioned above their entity clusters
+  - **Ungrouped Section**: Entities without color overrides appear in a separate "Ungrouped" section
+
+### Changed
+
+- Sidebar conditionally renders `GroupedEntityList` (with group headers) or flat `VirtualEntityList` based on whether any entities have color overrides
+- "Reset All Colors" now also clears group names and resets the group filter
+
+---
+
+## [0.1.8.1] - 2026-02-13
+
+### Fixed
+
+- **Bulk Selection Performance** - Fixed browser freeze when clicking "Select All" with 150+ entities:
+  - Debounced layout recalculation (300ms) for selection changes to prevent blocking the UI
+  - Skip expensive O(n²) force simulation when entities already have positions; grid-place only new entities
+  - Capped force simulation iterations to 30 for 100+ entities (from 100 default)
+  - Pre-built entity lookup Map for O(1) relationship resolution (replacing O(n) `find()` per edge)
+  - Layout mode changes and first render still apply immediately (no debounce)
+
+- **Share URL Dynamics 365 Context** - Fixed shared URLs losing Dynamics 365 navigation context:
+  - Share URLs now preserve the parent navigation URL (appid, pagetype, webresourceName) when running inside a Dynamics 365 iframe
+  - Added `getShareBaseUrl()` to read the parent frame's URL for correct D365 app context
+  - Added `getStateHash()` to check both current window and parent frame for URL hash state
+  - Fallback to current window URL when cross-origin access is blocked
+
+- **Filter-Aware Select All/None** - Fixed "All" and "None" buttons selecting/deselecting all entities regardless of active filters:
+  - When sidebar filters (search, publisher, solution) are active, "All" now selects only the displayed/filtered entities
+  - "None" similarly deselects only the displayed entities when filters are active
+  - Without active filters, behavior remains unchanged (selects/deselects all entities)
+  - Selection is additive when filtering — selecting filtered entities preserves previously selected entities outside the filter
+
+### Changed
+
+- `selectAll()` and `deselectAll()` now accept an optional `entityNames` parameter for targeted selection
+- Layout effect distinguishes first render from subsequent selection changes for proper debounce behavior
+
+---
+
+## [0.1.8.0] - 2026-02-13
+
+### Added
+
+- **Per-Table Color Customization** - Assign unique header colors to individual entity tables:
+  - **Palette Button**: Click the palette icon on any table header to open a color picker
+  - **Preset Swatches**: 10 carefully chosen colors (Red, Orange, Yellow, Green, Teal, Sky, Blue, Violet, Pink, Slate) in a compact 5x2 grid
+  - **Custom Colors**: Pick any color via native color picker
+  - **Used in Diagram**: Quickly reuse colors already applied to other tables in the diagram
+  - **Reset to Default**: Revert individual tables or reset all overrides at once via Settings
+  - **Override Priority**: Per-entity colors take priority over global custom/standard table colors
+  - **Snapshot Support**: Per-table colors are saved and restored with snapshots
+  - **URL Sharing Support**: Per-table colors included in shared URLs (only when overrides exist, zero overhead otherwise)
+  - **Export Support**: Draw.io, PNG, and SVG exports all respect per-entity color overrides
+  - **Backward Compatible**: Snapshots and URLs without color overrides load gracefully with defaults
+  - **Tests**: 22 new tests covering state management, URL codec, serialization, backward compatibility, and export
+
+---
+
+## [0.1.7.1] - 2026-02-13
+
+### Added
+
+- **NICOLAS Layout Algorithm** - Community-aware hierarchical layout for large entity sets:
+  - **Leiden Community Detection**: Automatically groups entities by relationship density into logical communities (e.g., Sales, Service entities)
+  - **Sugiyama Hierarchical Layout**: Applies layered layout within each community with crossing minimization (24 barycenter iterations)
+  - **Strip-Packing Placement**: Arranges community bounding boxes in rows for compact, non-overlapping inter-community layout
+  - **Adaptive Behavior**:
+    - <5 entities: Each entity is its own community (skip Leiden)
+    - 6-14 entities: Flat communities (Leiden max_level=1)
+    - 15+ entities: Nested L2 grouping (Leiden max_level=2)
+  - **Deterministic**: Alphabetical node sorting ensures reproducible layouts
+  - **Tests**: 40 new tests covering graph construction, Leiden detection, Sugiyama layout, bounding rects, meta-graph placement, L2 grouping, and full pipeline
+
+- **Layout Mode Dropdown** - Replaced cycling layout button with a dropdown selector:
+  - All 5 layout modes accessible: Force-Directed, Grid, Auto-Arrange, NICOLAS, Manual
+  - Layout mode names displayed clearly in the dropdown
+  - Improved discoverability and user experience
+
+- **Expanded Mock Data** - Enhanced development mock data from 25 to 150 entities:
+  - 150 realistic Dataverse entities across multiple business domains
+  - 252 relationships (N:1, 1:N, N:N) for comprehensive testing
+  - Includes entities from Sales, Service, Marketing, HR, Finance, and more
+  - Better simulation of real-world Dataverse environments
+
+- **Primary Name Indicator** ([#48](https://github.com/allandecastro/dataverse-erd-visualizer/issues/48)) - Visual indicator for each entity's primary name column:
+  - **PN Badge**: Cyan badge on entity cards, field drawer, and Draw.io export
+  - **Teal Background**: `#ccfbf1` fill color in Draw.io export for primary name fields
+  - **Sort Priority**: Primary name fields sort after primary key, before other fields
+  - **Selectable**: Unlike PK (always locked), PN fields can be toggled on/off
+
+- **Badge-Based Field Filtering** ([#48](https://github.com/allandecastro/dataverse-erd-visualizer/issues/48)) - Dynamic field type filters in the Field Drawer:
+  - Clickable badge chips (PK, PN, LKP, TXT, INT, DT, etc.) computed from entity attributes
+  - Each chip shows badge color, label, and field count
+  - Click to filter, click again to clear; only one badge filter active at a time
+  - Replaces hardcoded "Lookups" filter with dynamic badge-based approach
+  - **Tests**: 12 new tests for `getAvailableBadges()` and `filterByBadge()` utilities
+
+### Changed
+
+- **LayoutMode Type Consolidation** - Unified `LayoutMode` type as single source of truth in `types/index.ts`, re-exported from `erdTypes.ts` to eliminate duplication
+- **Layout Selector UI** - Replaced cycling button with dropdown selector for better discoverability of all 5 layout modes
+- **Feature Guide** - Updated layout documentation to include NICOLAS and Manual modes
+
+---
+
+## [0.1.7.0] - 2026-02-10
+
+### Added
+
+- **Relationship Line Customization** - Comprehensive relationship line customization with professional database notation styles:
+  - **Line Notation Styles**:
+    - Crow's Foot notation (standard database ERD with cardinality markers: one, many, one-optional, many-optional)
+    - UML style (composition/aggregation with filled/hollow diamonds, association arrows)
+    - Simple arrows (default minimalist style)
+  - **Line Appearance**:
+    - Stroke style: solid, dashed, or dotted lines
+    - Adjustable thickness (1-5px with 0.5px increments)
+    - Color by relationship type (1:N vs N:N with distinct colors)
+    - Color-matched SVG markers that sync with edge colors
+  - **Auto-Refresh Feature**:
+    - Silently reloads metadata when returning to tab after 5+ seconds away
+    - Detects new relationships from lookup fields created in Dataverse
+    - Shows toast notification for newly detected relationships
+    - Only active in real Dataverse mode (disabled in mock mode)
+    - Preserves diagram state during refresh (no layout disruption)
+  - **Mock Data Enhancements**:
+    - Added account manager lookup field (new_accountmanagerid)
+    - Added account-systemuser relationship for testing
+    - Added account-contact N:N relationship example
+  - **Implementation**:
+    - EdgeMarkerDefinitions component with reusable SVG marker definitions
+    - Edge marker utilities (getMarkerIdForNotation, getMarkerColorSuffix, getEdgeColor)
+    - Extended ColorSettings with 8 new properties
+    - Silent refresh pattern to preserve diagram state
+    - useRef pattern to avoid circular dependencies in relationship detection
+  - **Tests**: 33 new tests added (23 for edge marker utilities, 10 for EdgeMarkerDefinitions component)
+  - All settings automatically saved in snapshots and shareable URLs
+
+- **Comprehensive Quality Gates** ([#33](https://github.com/allandecastro/dataverse-erd-visualizer/issues/33)) - Added complete testing infrastructure and quality checks:
+  - **Unit Tests** - 140 passing tests covering critical functionality:
+    - URL State Codec (22 tests) - URL sharing and compression
+    - Draw.io Export (19 tests) - XML generation with injection prevention
+    - Badge Classification (29 tests) - Attribute type badges
+    - Snapshot Serialization (47 tests) - State persistence
+    - useERDState Hook (18 tests) - Core state management
+    - Setup Verification (5 tests) - Infrastructure validation
+  - **Test Infrastructure** - Vitest + React Testing Library:
+    - jsdom environment for component testing
+    - Istanbul coverage provider with HTML/LCOV reports
+    - Global test setup with browser API mocks (localStorage, canvas, matchMedia)
+    - TypeScript integration with vitest/globals
+  - **Pre-commit Hooks** - Automated quality checks:
+    - Husky for Git hook management
+    - lint-staged for auto-formatting staged files
+    - Runs full test suite before allowing commits
+    - Can bypass with `--no-verify` in emergencies
+  - **Enhanced CI/CD Pipeline** - Split test and build jobs:
+    - Linting check with ESLint
+    - Formatting check with Prettier
+    - TypeScript type checking
+    - Full test suite execution
+    - Build step only runs if tests pass
+  - **Test Scripts**:
+    - `npm run test` - Run tests in watch mode
+    - `npm run test:ui` - Open visual test UI
+    - `npm run test:run` - Run once and exit (CI mode)
+    - `npm run test:coverage` - Run with coverage report
+
+### Fixed
+
+- **drawioExport.ts** - Fixed field visibility bug discovered during testing (changed `attr.name` to `attr.logicalName`)
+
+### Security
+
+- **XML Injection Prevention** - Comprehensive tests ensure Draw.io export properly escapes special characters
+- **URL Safety Validation** - Tests verify state encoding doesn't exceed browser limits
+- **Input Validation** - Tests confirm proper handling of special characters in entity names
+
+---
+
+## [0.1.6.1] - 2025-02-08
+
+### Fixed
+
+- **Snapshot Layout Preservation** ([#37](https://github.com/allandecastro/dataverse-erd-visualizer/issues/37)) - Fixed issue where entity positions were not preserved when loading snapshots:
+  - Removed hardcoded `fitView` prop from ReactFlow component that was automatically adjusting viewport on every render
+  - Entity positions from snapshots are now preserved exactly as saved
+  - Custom table layouts are maintained after save/load operations
+  - The `fitView()` method remains available via ref for manual viewport adjustment
+
+---
+
+## [0.1.6.0] - 2025-02-08
+
+### Added
+
+- **Share URL Feature** ([#13](https://github.com/allandecastro/dataverse-erd-visualizer/issues/13)) - Generate shareable URLs that encode diagram state:
+  - Share button in toolbar with visual feedback (idle/copying/copied/error states)
+  - One-click URL generation and clipboard copy
+  - LZ-String compression for efficient URL encoding (60-70% size reduction)
+  - Minimal state format includes:
+    - Selected entities and positions
+    - Zoom level and viewport pan
+    - Layout mode (force/grid/auto)
+    - Search query and filters (publisher, solution)
+    - Dark/light mode preference
+  - Automatic state restoration when opening shared URLs:
+    - URL hash has highest priority (overrides localStorage)
+    - Schema validation warns if entities don't exist
+    - Automatically filters out missing entities
+    - Graceful fallback to localStorage or defaults
+  - Share individual snapshots from Snapshot Manager:
+    - Cyan share button on each snapshot card
+    - Share saved configurations vs. current state
+    - Same validation and compression as toolbar share
+  - URL length validation:
+    - Warning toast for URLs > 2000 characters (older browser compatibility)
+    - Error for URLs > 32KB (suggests using Export Snapshot instead)
+  - Keyboard shortcut:
+    - `Ctrl+Shift+C` - Generate and copy share URL
+  - Works seamlessly with both standalone and Dataverse web resource URLs
+  - Preserves query parameters (appid, pagetype, webresourceName)
+
+### Technical Improvements
+
+- Created URL state codec with LZ-String compression (`urlStateCodec.ts`)
+- Implemented schema validation for shared URLs (`urlStateValidation.ts`)
+- Added ShareButton component with multi-state UI (idle/copying/copied/error)
+- Extended useSnapshots hook with `shareSnapshot()` method
+- State restoration priority: URL hash > localStorage auto-save > defaults
+- Compact state format with single-letter keys to minimize URL size
+- URL-safe encoding via `compressToEncodedURIComponent()`
+- Graceful error handling for corrupted/malformed URLs
+- Updated Feature Guide with Share URL documentation (6 features)
+
+### Dependencies
+
+- Added `lz-string@1.5.0` - URL compression library
+- Added `@types/lz-string@1.3.34` - TypeScript definitions
+
+---
+
+## [0.1.5.0] - 2025-02-08
+
+### Added
+
+- **Snapshots Management System** ([#12](https://github.com/allandecastro/dataverse-erd-visualizer/issues/12)) - Complete diagram state save/restore functionality:
+  - Save and restore complete diagram states including:
+    - Entity selection and positions
+    - Field selection and ordering
+    - Zoom level and viewport pan position
+    - Filters (search, publisher, solution)
+    - Layout mode and visual settings (colors, dark mode)
+    - Collapsed entities state
+    - Edge offset adjustments
+  - Snapshot Manager modal with intuitive UI:
+    - Create snapshots with custom names
+    - Load, rename, and delete snapshots
+    - Export individual snapshots to JSON
+    - Export all snapshots to single JSON file
+    - Import snapshots from JSON files
+    - Visual list with timestamps and actions
+  - Auto-save functionality:
+    - Automatic state saving every 2 seconds (when enabled)
+    - Auto-save on browser close/refresh
+    - Separate auto-save slot (doesn't count toward 10-snapshot limit)
+    - Toggle auto-save on/off in Snapshot Manager
+  - Schema validation on load:
+    - Detects missing entities/fields when loading snapshots
+    - Shows warning with count of missing elements
+    - Automatically filters out invalid entries
+    - Prevents crashes from schema mismatches
+  - Storage management:
+    - Browser localStorage for automatic persistence
+    - Up to 10 manual snapshots (oldest auto-removed)
+    - LRU (Least Recently Used) eviction strategy
+    - Storage usage indicator (X/10 snapshots)
+  - Keyboard shortcuts:
+    - `Ctrl+S` - Save new snapshot
+    - `Ctrl+Shift+S` - Open Snapshot Manager
+  - Toolbar integration with Bookmark icon button
+  - Error handling for quota exceeded and corrupted data
+
+### Changed
+
+- **Guide Button Styling** - Fixed border-radius not applying correctly:
+  - Removed conflicting `border-image` property
+  - Added consistent border with rounded corners (6px radius)
+  - Added hover effects for better interactivity
+  - Improved visual consistency with other toolbar buttons
+
+### Technical Improvements
+
+- Created dedicated snapshot type definitions (`snapshotTypes.ts`)
+- Implemented localStorage abstraction layer (`snapshotStorage.ts`)
+- Built Set↔Array serialization helpers (`snapshotSerializer.ts`)
+- Added `useSnapshots` hook with complete CRUD operations and auto-save logic
+- Extended `useERDState` with `getSerializableState()` and `restoreState()` methods
+- Implemented debounced auto-save with 2-second delay
+- Added JSON export/import with validation and error handling
+- Created modular component architecture:
+  - `SnapshotManager` - Main modal container
+  - `SnapshotManagerHeader` - Title, close button, auto-save toggle
+  - `SnapshotListItem` - Individual snapshot card with inline editing
+  - `SnapshotManagerFooter` - Import/Export All buttons + storage indicator
+- CSS modules for clean, scoped styling
+
+---
+
+## [0.1.4.0] - 2025-02-07
+
+### Added
+
+- **Enhanced Draw.io Export** - Major improvements to draw.io (.drawio) file export:
+  - Entity boxes now display fields with badges, types, and primary key indicators
+  - Entities use swimlane structure with nested child cells for better editability
+  - Fields show visual distinction: primary keys (gold), lookup fields (pink), custom fields (blue)
+  - Relationship connectors now show multi-line labels with:
+    - Cardinality (N:1, 1:N, N:N)
+    - Schema name
+    - Field mapping (referencingAttribute → referencedAttribute)
+  - Alternate keys visualization with dedicated section at bottom of entity boxes
+  - Supports single-attribute and composite keys
+  - Entity width increased from 200px to 300px to accommodate field information
+  - Dynamic height calculation based on visible fields and alternate keys
+  - Respects collapsed entity state (shows only header + logical name when collapsed)
+
+- **Performance Optimizations for Draw.io Export** - 3-5x faster for large diagrams:
+  - Cached style constants (85% reduction in style generation overhead)
+  - Memoized XML escaping with Map-based cache (40% reduction in escaping overhead)
+  - Primary key lookup map for O(1) access (90% faster field visibility calculations)
+  - Pre-allocated arrays to reduce memory allocations (30% reduction in array resizing)
+  - Granular progress reporting (updates every 5 entities, every 10 relationships)
+  - Export time improved from ~150-200ms to ~30-50ms for 100 entities
+
+- **Custom Field Filter** ([#25](https://github.com/allandecastro/dataverse-erd-visualizer/issues/25))
+  - Added ability to filter fields by custom fields only in Field Drawer
+  - New "Custom" filter toggle button with wrench icon
+  - Shows only custom attributes when enabled
+
+### Fixed
+
+- **FieldDrawer Color Consistency** - Fixed dark mode color inconsistency:
+  - FieldDrawer now uses theme context colors instead of hardcoded values
+  - Panel background matches Sidebar and Toolbar (`#242424` in dark mode)
+  - Header background uses same `panelBg` color for consistency
+  - All text, borders, and inputs use centralized theme colors
+
+- **Publisher Filter at Startup** ([#27](https://github.com/allandecastro/dataverse-erd-visualizer/issues/27))
+  - Fixed issue where filter tables by publisher was not working at application start-up
+  - Publisher filter now correctly applies on initial load
+
+### Changed
+
+- Draw.io export format upgraded to use swimlane structure (better Visio compatibility)
+- Entity boxes now editable field-by-field in draw.io after export
+- FieldDrawer components now use centralized theme system for consistent styling
+
+### Technical Improvements
+
+- Implemented closure-based memoization for XML escaping function
+- Created primary key lookup map for efficient O(n) → O(1) field access
+- Pre-allocated arrays with estimated sizes to minimize garbage collection
+- Added comprehensive performance optimizations with minimal bundle size impact (+670 bytes, 0.13%)
+- Improved code organization with dedicated helper functions for draw.io export
+- Better separation of concerns between style generation and XML assembly
+
+---
+
+## [0.1.3.3] - 2024-12 (BETA)
+
+### Added
+
+- Initial public release
+- Interactive ERD visualization with React Flow
+- Support for force-directed, grid, and auto-arrange layouts
+- Entity search and filtering by publisher/solution
+- Field selection per entity with drawer interface
+- Export to PNG (clipboard), SVG (download), and Mermaid (clipboard)
+- Basic Draw.io export functionality
+- Dark/Light mode theme support
+- Viewport culling for performance with large diagrams
+- Canvas mode for 100+ tables
+- Keyboard shortcuts (Ctrl+F search, Escape deselect, +/- zoom)
+- Feature guide for onboarding
+- Alternate key visualization on entity cards
+- Mock data mode for local development
+- Dataverse Web API integration
+- Custom table/relationship color settings
+- Precise relationship connections from Lookup fields to Primary Keys
+
+### Infrastructure
+
+- TypeScript + React + Vite build system
+- ESLint + Prettier code quality tools
+- GitHub Actions CI/CD pipeline
+- Automated solution packaging for Power Platform deployment
+- MIT License
+
+---
+
+## Version History
+
+- **Unreleased** - February 2026 - Field label display mode (display name, schema name, or both)
+- **v0.1.9.0** - February 2026 - Entity grouping via color association
+- **v0.1.8.1** - February 2026 - Bulk selection performance, Share URL D365 context, filter-aware Select All
+- **v0.1.8.0** - February 2026 - Per-table color customization
+- **v0.1.7.1** - February 2026 - NICOLAS layout, primary name indicator, badge filtering, expanded mock data
+- **v0.1.7.0** - February 2026 - Relationship line customization, quality gates
+- **v0.1.6.0** - February 2025 - Share URL, Snapshots
+- **v0.1.5.0** - February 2025 - Snapshot management system
+- **v0.1.4.0** - February 2025 - Draw.io enhancements, performance optimizations, bug fixes
+- **v0.1.3.3** - December 2024 - Initial BETA release
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute to this project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
